@@ -18,6 +18,12 @@ def load_checkpoint(config, model, optimizer, lr_scheduler, loss_scaler, logger)
             config.MODEL.RESUME, map_location='cpu', check_hash=True)
     else:
         checkpoint = torch.load(config.MODEL.RESUME, map_location='cpu')
+
+    if checkpoint['model']['head.weight'].shape[0] == 1000:
+        checkpoint['model']['head.weight'] = torch.nn.Parameter(
+            torch.nn.init.xavier_uniform(torch.empty(config.MODEL.NUM_CLASSES, 768)))
+        checkpoint['model']['head.bias'] = torch.nn.Parameter(torch.randn(config.MODEL.NUM_CLASSES))
+
     msg = model.load_state_dict(checkpoint['model'], strict=False)
     logger.info(msg)
     max_accuracy = 0.0
@@ -170,6 +176,7 @@ def auto_resume_helper(output_dir):
 
 
 def reduce_tensor(tensor):
+    tensor = torch.tensor(tensor)
     rt = tensor.clone()
     dist.all_reduce(rt, op=dist.ReduceOp.SUM)
     rt /= dist.get_world_size()

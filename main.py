@@ -12,6 +12,8 @@ import random
 import argparse
 import datetime
 import numpy as np
+import sklearn
+import matplotlib.pyplot as plt
 
 import torch
 import torch.backends.cudnn as cudnn
@@ -28,6 +30,12 @@ from optimizer import build_optimizer
 from logger import create_logger
 from utils import load_checkpoint, load_pretrained, save_checkpoint, NativeScalerWithGradNormCount, auto_resume_helper, \
     reduce_tensor
+
+os.environ['CUDA_VISIBLE_DEVICES'] = '0/'
+os.environ['WORLD_SIZE'] = '1'
+os.environ['RANK'] = '0'
+os.environ['MASTER_ADDR'] = 'localhost'
+os.environ['MASTER_PORT'] = '12345'
 
 
 def parse_option():
@@ -128,16 +136,32 @@ def main(config):
         else:
             logger.info(f'no checkpoint found in {config.OUTPUT}, ignoring auto resume')
 
+    train_loss = []
+    val_loss = []
+    val_acc = []
+    val_TP = []
+    val_TN = []
+    val_FP = []
+    val_FN = []
+    val_prob = []
+
     if config.MODEL.RESUME:
         max_accuracy = load_checkpoint(config, model_without_ddp, optimizer, lr_scheduler, loss_scaler, logger)
-        acc1, acc5, loss = validate(config, data_loader_val, model)
+        acc1, loss, TP, TN, FP, FN, prob = validate(config, data_loader_val, model)
+        val_loss.append(loss)
+        val_acc.append(acc1)
+        val_TP.append(TP)
+        val_TN.append(TN)
+        val_FP.append(FP)
+        val_FN.append(FN)
+        val_prob.append(prob)
         logger.info(f"Accuracy of the network on the {len(dataset_val)} test images: {acc1:.1f}%")
         if config.EVAL_MODE:
             return
 
     if config.MODEL.PRETRAINED and (not config.MODEL.RESUME):
         load_pretrained(config, model_without_ddp, logger)
-        acc1, acc5, loss = validate(config, data_loader_val, model)
+        acc1, loss, _, _, _, _, _= validate(config, data_loader_val, model)
         logger.info(f"Accuracy of the network on the {len(dataset_val)} test images: {acc1:.1f}%")
 
     if config.THROUGHPUT_MODE:
@@ -145,22 +169,52 @@ def main(config):
         return
 
     logger.info("Start training")
-    start_time = time.time()
-    for epoch in range(config.TRAIN.START_EPOCH, config.TRAIN.EPOCHS):
-        data_loader_train.sampler.set_epoch(epoch)
 
-        train_one_epoch(config, model, criterion, data_loader_train, optimizer, epoch, mixup_fn, lr_scheduler,
-                        loss_scaler)
+    start_time = time.time()
+    for epoch in range(config.TRAIN.START_EPOCH, config.TRAIN.EPOCHS + 1):
+        # data_loader_train.sampler.set_epoch(epoch)
+
+        loss1 = train_one_epoch(config, model, criterion, data_loader_train, optimizer, epoch, mixup_fn, lr_scheduler,
+                                loss_scaler)
+        train_loss.append(loss1)
         if dist.get_rank() == 0 and (epoch % config.SAVE_FREQ == 0 or epoch == (config.TRAIN.EPOCHS - 1)):
             save_checkpoint(config, epoch, model_without_ddp, max_accuracy, optimizer, lr_scheduler, loss_scaler,
                             logger)
 
-        acc1, acc5, loss = validate(config, data_loader_val, model)
+        acc1, loss, TP, TN, FP, FN, prob= validate(config, data_loader_val, model)
+
+        val_loss.append(loss)
+        val_acc.append(acc1)
+        val_TP.append(TP)
+        val_TN.append(TN)
+        val_FP.append(FP)
+        val_FN.append(FN)
+        val_prob.append(prob)
+
         logger.info(f"Accuracy of the network on the {len(dataset_val)} test images: {acc1:.1f}%")
         max_accuracy = max(max_accuracy, acc1)
         logger.info(f'Max accuracy: {max_accuracy:.2f}%')
 
     total_time = time.time() - start_time
+
+    file_name = '数据集名称'
+    with open(fr"路径\{file_name}_train_loss.txt", 'w') as train_los:
+        train_los.write(str(train_loss))
+    with open(fr"路径\{file_name}_val_loss.txt", 'w') as val_los:
+        val_los.write(str(val_loss))
+    with open(fr"路径\{file_name}_val_acc.txt", 'w') as train_ac:
+        train_ac.write(str(val_acc))
+    with open(fr"路径\{file_name}_val_TP.txt", 'w') as val_record_tp:
+        val_record_tp.write(str(val_TP))
+    with open(fr"路径\{file_name}_val_TN.txt", 'w') as val_record_tn:
+        val_record_tn.write(str(val_TN))
+    with open(fr"路径\{file_name}_val_FP.txt", 'w') as val_record_fp:
+        val_record_fp.write(str(val_FP))
+    with open(fr"路径\{file_name}_val_FN.txt", 'w') as val_record_fn:
+        val_record_fn.write(str(val_FN))
+    with open(fr"路径\{file_name}_val_prob.txt", 'w') as val_record_prob:
+        val_record_prob.write(str(val_prob))
+
     total_time_str = str(datetime.timedelta(seconds=int(total_time)))
     logger.info('Training time {}'.format(total_time_str))
 
@@ -174,6 +228,8 @@ def train_one_epoch(config, model, criterion, data_loader, optimizer, epoch, mix
     loss_meter = AverageMeter()
     norm_meter = AverageMeter()
     scaler_meter = AverageMeter()
+
+    loss_list = []
 
     start = time.time()
     end = time.time()
@@ -221,8 +277,11 @@ def train_one_epoch(config, model, criterion, data_loader, optimizer, epoch, mix
                 f'grad_norm {norm_meter.val:.4f} ({norm_meter.avg:.4f})\t'
                 f'loss_scale {scaler_meter.val:.4f} ({scaler_meter.avg:.4f})\t'
                 f'mem {memory_used:.0f}MB')
+        loss_list.append(loss_meter.avg)
     epoch_time = time.time() - start
     logger.info(f"EPOCH {epoch} training takes {datetime.timedelta(seconds=int(epoch_time))}")
+
+    return sum(loss_list[1:]) / (len(loss_list)-1)
 
 
 @torch.no_grad()
@@ -233,28 +292,48 @@ def validate(config, data_loader, model):
     batch_time = AverageMeter()
     loss_meter = AverageMeter()
     acc1_meter = AverageMeter()
-    acc5_meter = AverageMeter()
+
+    # 良性benign = 0(阳性positive), 恶性malignant = 1(阴性negative)
+    TP = 0  # 真实为恶性，预测为恶性
+    TN = 0  # 真实为良性，预测为良性
+    FP = 0  # 真实为良性，预测为恶性
+    FN = 0  # 真实为恶性，预测为良性
+    prob = []
 
     end = time.time()
     for idx, (images, target) in enumerate(data_loader):
         images = images.cuda(non_blocking=True)
-        target = target.cuda(non_blocking=True)
+        target = target.long().cuda(non_blocking=True)
 
         # compute output
         with torch.cuda.amp.autocast(enabled=config.AMP_ENABLE):
             output = model(images)
 
+        for num in range(len(output)):
+            if output[num][0] > output[num][1]:
+                # 预测为良性
+                if target[num] == 0:
+                    TN += 1
+                elif target[num] == 1:
+                    FN += 1
+            elif output[num][0] < output[num][1]:
+                # 预测为恶性
+                if target[num] == 0:
+                    FP += 1
+                elif target[num] == 1:
+                    TP += 1
+            array = output[num].data.cpu().numpy()
+            array1 = [array[0], array[1]]
+            prob.append(array1)
         # measure accuracy and record loss
         loss = criterion(output, target)
-        acc1, acc5 = accuracy(output, target, topk=(1, 5))
+        acc1 = accuracy(output, target, topk=(1,))
 
         acc1 = reduce_tensor(acc1)
-        acc5 = reduce_tensor(acc5)
         loss = reduce_tensor(loss)
 
         loss_meter.update(loss.item(), target.size(0))
         acc1_meter.update(acc1.item(), target.size(0))
-        acc5_meter.update(acc5.item(), target.size(0))
 
         # measure elapsed time
         batch_time.update(time.time() - end)
@@ -267,10 +346,11 @@ def validate(config, data_loader, model):
                 f'Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
                 f'Loss {loss_meter.val:.4f} ({loss_meter.avg:.4f})\t'
                 f'Acc@1 {acc1_meter.val:.3f} ({acc1_meter.avg:.3f})\t'
-                f'Acc@5 {acc5_meter.val:.3f} ({acc5_meter.avg:.3f})\t'
                 f'Mem {memory_used:.0f}MB')
-    logger.info(f' * Acc@1 {acc1_meter.avg:.3f} Acc@5 {acc5_meter.avg:.3f}')
-    return acc1_meter.avg, acc5_meter.avg, loss_meter.avg
+    logger.info(
+        f' * Acc@1 {acc1_meter.avg:.3f}\t'
+    )
+    return acc1_meter.avg, loss_meter.avg, TP, TN, FP, FN, prob
 
 
 @torch.no_grad()
@@ -307,7 +387,7 @@ if __name__ == '__main__':
         rank = -1
         world_size = -1
     torch.cuda.set_device(config.LOCAL_RANK)
-    torch.distributed.init_process_group(backend='nccl', init_method='env://', world_size=world_size, rank=rank)
+    torch.distributed.init_process_group(backend='gloo', init_method='env://', world_size=world_size, rank=rank)
     torch.distributed.barrier()
 
     seed = config.SEED + dist.get_rank()
