@@ -90,7 +90,7 @@ def parse_option():
 
 
 def main(config):
-    dataset_train, dataset_val, data_loader_train, data_loader_val, mixup_fn = build_loader(config)
+    # dataset_train, dataset_val, data_loader_train, data_loader_val, mixup_fn = build_loader(config)
 
     logger.info(f"Creating model:{config.MODEL.TYPE}/{config.MODEL.NAME}")
     model = build_model(config)
@@ -171,29 +171,55 @@ def main(config):
     logger.info("Start training")
 
     start_time = time.time()
-    for epoch in range(config.TRAIN.START_EPOCH, config.TRAIN.EPOCHS + 1):
-        # data_loader_train.sampler.set_epoch(epoch)
+## add k-folds
+    num_folds=5
+    fold_metrics = {
+        "val_loss": {},
+        "val_acc": {},
+        "val_TP": {},
+        "val_TN": {},
+        "val_FP": {},
+        "val_FN": {},
+        "val_prob": {}
+    }
+    
+    for fold_index in range(num_folds):
+        dataset_train, dataset_val, data_loader_train, data_loader_val, mixup_fn = build_loader(config,current_fold=fold_index)
+        fold_train_loss[fold_index] = []
+        fold_val_loss[fold_index] = []
+        for metric in fold_metrics.keys():
+             fold_metrics[metric][fold_index] = []
 
-        loss1 = train_one_epoch(config, model, criterion, data_loader_train, optimizer, epoch, mixup_fn, lr_scheduler,
-                                loss_scaler)
-        train_loss.append(loss1)
-        if dist.get_rank() == 0 and (epoch % config.SAVE_FREQ == 0 or epoch == (config.TRAIN.EPOCHS - 1)):
-            save_checkpoint(config, epoch, model_without_ddp, max_accuracy, optimizer, lr_scheduler, loss_scaler,
-                            logger)
+        for epoch in range(config.TRAIN.START_EPOCH, config.TRAIN.EPOCHS + 1):
+            # data_loader_train.sampler.set_epoch(epoch)
 
-        acc1, loss, TP, TN, FP, FN, prob= validate(config, data_loader_val, model)
+            loss1 = train_one_epoch(config, model, criterion, data_loader_train, optimizer, epoch, mixup_fn, lr_scheduler,
+                                    loss_scaler)
+            fold_train_loss[fold_index].append(loss1.item())
+            train_loss.append(loss1)
+            if dist.get_rank() == 0 and (epoch % config.SAVE_FREQ == 0 or epoch == (config.TRAIN.EPOCHS - 1)):
+                save_checkpoint(config, epoch, model_without_ddp, max_accuracy, optimizer, lr_scheduler, loss_scaler,
+                                logger)
 
-        val_loss.append(loss)
-        val_acc.append(acc1)
-        val_TP.append(TP)
-        val_TN.append(TN)
-        val_FP.append(FP)
-        val_FN.append(FN)
-        val_prob.append(prob)
+            acc1, loss, TP, TN, FP, FN, prob= validate(config, data_loader_val, model)
+            fold_metrics["val_loss"][fold_index].append(loss)
+            fold_metrics["val_acc"][fold_index].append(acc1)
+            fold_metrics["val_TP"][fold_index].append(TP)
+            fold_metrics["val_TN"][fold_index].append(TN)
+            fold_metrics["val_FP"][fold_index].append(FP)
+            fold_metrics["val_FN"][fold_index].append(FN)
+            fold_metrics["val_prob"][fold_index].append(prob)
+            # val_loss.append(loss)
+            # val_acc.append(acc1)
+            # val_TP.append(TP)
+            # val_TN.append(TN)
+            # val_FP.append(FP)
+            # val_FN.append(FN)
+            # val_prob.append(prob)
 
-        logger.info(f"Accuracy of the network on the {len(dataset_val)} test images: {acc1:.1f}%")
-        max_accuracy = max(max_accuracy, acc1)
-        logger.info(f'Max accuracy: {max_accuracy:.2f}%')
+            logger.info(f"Accuracy of the network on the {len(dataset_val)} test images: {acc1:.1f}%")
+            max_accuracy = max(max_accuracy, acc1)
+            logger.info(f'Max accuracy: {max_accuracy:.2f}%')
 
     total_time = time.time() - start_time
 

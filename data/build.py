@@ -41,14 +41,17 @@ except:
     from timm.data.transforms import _pil_interp
 
 
-def build_loader(config):
+def build_loader(config,current_fold):
     config.defrost()
-    # dataset_train, config.MODEL.NUM_CLASSES = build_dataset(is_train=True, config=config)
-    dataset_train, config.MODEL.NUM_CLASSES = build_dataset(config=config)
+    dataset_train, config.MODEL.NUM_CLASSES = build_dataset(config=config,k_folds=5)
     config.freeze()
     print(f"local rank {config.LOCAL_RANK} / global rank {dist.get_rank()} successfully build train dataset")
-    dataset_val, _ = build_dataset(is_train=False, config=config)
+    
     print(f"local rank {config.LOCAL_RANK} / global rank {dist.get_rank()} successfully build val dataset")
+    dataset_train,dataset_val = dataset[current_fold]
+
+    # train_loader = DataLoader(train_data,batch_size=32,shuffle=True)
+    # val_loader = DataLoader(val_data,batch_size=32,shuffle=True)
 
     data_loader_train = torch.utils.data.DataLoader(
         dataset_train,
@@ -68,6 +71,31 @@ def build_loader(config):
         drop_last=False
     )
 
+    # dataset_train, config.MODEL.NUM_CLASSES = build_dataset(is_train=True, config=config)
+   
+    # config.freeze()
+    # print(f"local rank {config.LOCAL_RANK} / global rank {dist.get_rank()} successfully build train dataset")
+    # dataset_val, _ = build_dataset(is_train=False, config=config)
+    # print(f"local rank {config.LOCAL_RANK} / global rank {dist.get_rank()} successfully build val dataset")
+
+    # data_loader_train = torch.utils.data.DataLoader(
+    #     dataset_train,
+    #     batch_size=config.DATA.BATCH_SIZE,
+    #     shuffle=True,
+    #     num_workers=0,
+    #     pin_memory=False,
+    #     drop_last=True,
+    # )
+
+    # data_loader_val = torch.utils.data.DataLoader(
+    #     dataset_val,
+    #     batch_size=config.DATA.BATCH_SIZE,
+    #     shuffle=False,
+    #     num_workers=0,
+    #     pin_memory=False,
+    #     drop_last=False
+    # )
+
     # setup mixup / cutmix
     mixup_fn = None
     mixup_active = config.AUG.MIXUP > 0 or config.AUG.CUTMIX > 0. or config.AUG.CUTMIX_MINMAX is not None
@@ -80,9 +108,9 @@ def build_loader(config):
     return dataset_train, dataset_val, data_loader_train, data_loader_val, mixup_fn
 
 
-def build_dataset(config):
+def build_dataset(config,k_folds):
     # dataset = IN22KDATASET(config.DATA.DATA_PATH, is_train)
-    dataset = IN22KDATASET(config.DATA.DATA_PATH)
+    dataset = IN22KDATASET(config.DATA.DATA_PATH,k_folds)
     nb_classes = config.MODEL.NUM_CLASSES
 
     return dataset, nb_classes

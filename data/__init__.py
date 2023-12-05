@@ -3,9 +3,9 @@ from .data_simmim_pt import build_loader_simmim
 from .data_simmim_ft import build_loader_finetune
 
 
-def build_loader(config, simmim=False, is_pretrain=False):
+def build_loader(config,current_fold, simmim=False, is_pretrain=False):
     if not simmim:
-        return _build_loader(config)
+        return _build_loader(config,current_fold)
     if is_pretrain:
         return build_loader_simmim(config)
     else:

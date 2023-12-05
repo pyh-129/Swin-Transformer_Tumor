@@ -1,36 +1,35 @@
 from torch.utils.data import DataLoader
-
-# 初始化数据集
+from torch import nn, optim
+from imagenet22k_dataset import IN22KDATASET
+# Initialize the dataset
 dataset = IN22KDATASET(root='D:\Learning\Grad_0\Project\Swin-Transformer\data\dataset\shell6', k_folds=5)
 
-# 定义模型、损失函数和优化器
-model = YourModel()
-criterion = torch.nn.CrossEntropyLoss()
-optimizer = torch.optim.SGD(model.parameters(), lr=0.01)
+# Define your model, loss function and optimizer
+# model = YourModel()
+# criterion = nn.CrossEntropyLoss()
+# optimizer = optim.SGD(model.parameters(), lr=0.01)
 
-for current_fold in range(dataset.k_folds):
-    dataset.current_fold = current_fold
+# Perform k-fold cross-validation
+for fold in range(dataset.k_folds):
+    # Get the data for the current fold
+    train_data, test_data = dataset[fold]
 
-    # 创建训练和验证的数据加载器
-    train_loader = DataLoader(Subset(dataset, dataset.train_indices), batch_size=32, shuffle=True)
-    valid_loader = DataLoader(Subset(dataset, dataset.test_indices), batch_size=32, shuffle=False)
+    # Create DataLoaders for the training and test data
+    train_loader = DataLoader(train_data, batch_size=32, shuffle=True)
+    test_loader = DataLoader(test_data, batch_size=32, shuffle=False)
+    print(train_loader)
+    # Train the model for the current fold
+    # for epoch in range(num_epochs):
+    #     for inputs, targets in train_loader:
+    #         optimizer.zero_grad()
+    #         outputs = model(inputs)
+    #         loss = criterion(outputs, targets)
+    #         loss.backward()
+    #         optimizer.step()
 
-    for epoch in range(num_epochs):
-        # 训练阶段
-        model.train()
-        for images, labels in train_loader:
-            optimizer.zero_grad()
-            outputs = model(images)
-            loss = criterion(outputs, labels)
-            loss.backward()
-            optimizer.step()
-
-        # 验证阶段
-        model.eval()
-        with torch.no_grad():
-            for images, labels in valid_loader:
-                outputs = model(images)
-                loss = criterion(outputs, labels)
-                # 计算验证指标，如准确率等
-
-        # 打印或保存训练和验证的结果
+    # Evaluate the model on the test data
+    # model.eval()
+    # with torch.no_grad():
+    #     for inputs, targets in test_loader:
+    #         outputs = model(inputs)
+    #         # Compute your evaluation metrics here
