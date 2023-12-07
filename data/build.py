@@ -17,6 +17,7 @@ from timm.data import create_transform
 from .cached_image_folder import CachedImageFolder
 from .imagenet22k_dataset import IN22KDATASET
 from .samplers import SubsetRandomSampler
+from torch.utils.data import Subset
 
 try:
     from torchvision.transforms import InterpolationMode
