@@ -71,8 +71,8 @@ def parse_option():
     parser.add_argument('--eval', action='store_true', help='Perform evaluation only')
     parser.add_argument('--throughput', action='store_true', help='Test throughput only')
 
-    # distributed training
-    parser.add_argument("--local_rank", type=int, required=True, help='local rank for DistributedDataParallel')
+    # distributed training 去掉
+    parser.add_argument("--local_rank",  required=True, type=int, help='local rank for DistributedDataParallel')
 
     # for acceleration
     parser.add_argument('--fused_window_process', action='store_true',
@@ -221,7 +221,7 @@ def main(config):
 
     total_time = time.time() - start_time
 
-    file_name = '数据集名称'
+    file_name = 'dataset'
     with open(fr"路径\{file_name}_train_loss.txt", 'w') as train_los:
         train_los.write(str(train_loss))
     with open(fr"路径\{file_name}_val_loss.txt", 'w') as val_los:

@@ -13,11 +13,11 @@ from torchvision import datasets, transforms
 from timm.data.constants import IMAGENET_DEFAULT_MEAN, IMAGENET_DEFAULT_STD
 from timm.data import Mixup
 from timm.data import create_transform
+from torch.utils.data import Dataset, Subset
 
 from .cached_image_folder import CachedImageFolder
 from .imagenet22k_dataset import IN22KDATASET
 from .samplers import SubsetRandomSampler
-from torch.utils.data import Subset
 
 try:
     from torchvision.transforms import InterpolationMode
