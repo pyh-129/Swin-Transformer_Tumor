@@ -184,9 +184,8 @@ def main(config):
     }
     
     for fold_index in range(num_folds):
-        dataset_train, dataset_val, data_loader_train, data_loader_val, mixup_fn = build_loader(config,current_fold=fold_index)
-        fold_train_loss[fold_index] = []
-        fold_val_loss[fold_index] = []
+        dataset_train, dataset_val, data_loader_train, data_loader_val, mixup_fn = build_loader(config,num_folds,current_fold=fold_index)
+       
         for metric in fold_metrics.keys():
              fold_metrics[metric][fold_index] = []
 
@@ -195,7 +194,6 @@ def main(config):
 
             loss1 = train_one_epoch(config, model, criterion, data_loader_train, optimizer, epoch, mixup_fn, lr_scheduler,
                                     loss_scaler)
-            fold_train_loss[fold_index].append(loss1.item())
             train_loss.append(loss1)
             if dist.get_rank() == 0 and (epoch % config.SAVE_FREQ == 0 or epoch == (config.TRAIN.EPOCHS - 1)):
                 save_checkpoint(config, epoch, model_without_ddp, max_accuracy, optimizer, lr_scheduler, loss_scaler,

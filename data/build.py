@@ -41,14 +41,19 @@ except:
     from timm.data.transforms import _pil_interp
 
 
-def build_loader(config,current_fold):
+def build_loader(config,k_folds,current_fold):
     config.defrost()
-    dataset_train, config.MODEL.NUM_CLASSES = build_dataset(config=config,k_folds=5)
+    # dataset_train, config.MODEL.NUM_CLASSES = build_dataset(config=config,k_folds=5)
+    dataset,nb_classes = build_dataset(config=config,k_folds=k_folds,current_fold=current_fold)
+    dataset_train = Subset(dataset, dataset.train_indices)
+    dataset_val = Subset(dataset, dataset.test_indices)
+    config.freeze()
     config.freeze()
     print(f"local rank {config.LOCAL_RANK} / global rank {dist.get_rank()} successfully build train dataset")
     
     print(f"local rank {config.LOCAL_RANK} / global rank {dist.get_rank()} successfully build val dataset")
-    dataset_train,dataset_val = dataset[current_fold]
+  
+    # config.freeze()
 
     # train_loader = DataLoader(train_data,batch_size=32,shuffle=True)
     # val_loader = DataLoader(val_data,batch_size=32,shuffle=True)
@@ -108,9 +113,9 @@ def build_loader(config,current_fold):
     return dataset_train, dataset_val, data_loader_train, data_loader_val, mixup_fn
 
 
-def build_dataset(config,k_folds):
+def build_dataset(config,k_folds,current_fold):
     # dataset = IN22KDATASET(config.DATA.DATA_PATH, is_train)
-    dataset = IN22KDATASET(config.DATA.DATA_PATH,k_folds)
+    dataset = IN22KDATASET(config.DATA.DATA_PATH,k_folds,current_fold)
     nb_classes = config.MODEL.NUM_CLASSES
 
     return dataset, nb_classes

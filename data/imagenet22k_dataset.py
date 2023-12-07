@@ -16,11 +16,11 @@ warnings.filterwarnings("ignore", "(Possibly )?corrupt EXIF data", UserWarning)
 from torch.utils.data import random_split, Subset
 
 class IN22KDATASET(data.Dataset):
-    def __init__(self, root, k_folds, current_fold):
+    def __init__(self, root, k_folds,current_fold):
         super(IN22KDATASET, self).__init__()
 
-        self.data_path = root
-        self.single_path = os.path.join(self.data_path, r'D:\Learning\Grad_0\Project\Swin-Transformer\data\dataset\shell6')
+        self.data_path = root #D:\Learning\Grad_0\Project\Swin-Transformer_Tumor\Swin-Transformer_Tumor\data\dataset
+        self.single_path = os.path.join(self.data_path, r'shell3')
 
         self.class_list = os.listdir(self.single_path)
 
@@ -41,11 +41,12 @@ class IN22KDATASET(data.Dataset):
             start = i * fold_size
             end = start + fold_size if i != k_folds - 1 else len(self.data_list)
             self.folds.append(range(start, end))
-
+    
         # Get the indices for the current fold
         self.test_indices = self.folds[current_fold]
         self.train_indices = [idx for fold in self.folds if fold is not self.test_indices for idx in fold]
 
+       
     def __getitem__(self, index):
     # Use the current fold's train/test indices to access the data
         sample = self.data_list[index]
@@ -70,7 +71,16 @@ class IN22KDATASET(data.Dataset):
 
     def __len__(self):
         return len(self.data_list)
-
+    def _load_image(self, path):
+        try:
+            # Load the image using numpy
+            im = np.load(path)
+        except Exception as e:
+            print(f"ERROR IMG LOADED: {path}, due to {e}")
+            # If an error occurs, generate a random image
+            random_img = np.random.rand(35, 112, 112) * 255
+            im = np.int32(random_img)
+        return im
 # class IN22KDATASET(data.Dataset):
 #     def __init__(self, root, is_train):
 #         super(IN22KDATASET, self).__init__()

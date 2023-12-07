@@ -2,22 +2,32 @@ from torch.utils.data import DataLoader
 from torch import nn, optim
 from imagenet22k_dataset import IN22KDATASET
 # Initialize the dataset
-dataset = IN22KDATASET(root='D:\Learning\Grad_0\Project\Swin-Transformer\data\dataset\shell6', k_folds=5)
-
 # Define your model, loss function and optimizer
 # model = YourModel()
 # criterion = nn.CrossEntropyLoss()
 # optimizer = optim.SGD(model.parameters(), lr=0.01)
 
 # Perform k-fold cross-validation
-for fold in range(dataset.k_folds):
-    # Get the data for the current fold
-    train_data, test_data = dataset[fold]
+def test_IN22KDATASET():
+    
+    root_dir = 'D:\Learning\Grad_0\Project\Swin-Transformer_Tumor\Swin-Transformer_Tumor\data\dataset'
+    k_folds = 5
+    current_fold = 0
 
-    # Create DataLoaders for the training and test data
-    train_loader = DataLoader(train_data, batch_size=32, shuffle=True)
-    test_loader = DataLoader(test_data, batch_size=32, shuffle=False)
-    print(train_loader)
+    # Create an instance of IN22KDATASET
+    dataset = IN22KDATASET(root_dir, k_folds, current_fold)
+
+    # Get the total number of data
+    print(f'Total number of data: {len(dataset)}')
+
+    data, label = dataset[0]
+    print(f'First data: {data}, label: {label}')
+
+    data, label = dataset[1848]
+    print(f'Last data: {data}, label: {label}')
+
+if __name__ == '__main__':
+    test_IN22KDATASET()
     # Train the model for the current fold
     # for epoch in range(num_epochs):
     #     for inputs, targets in train_loader:
