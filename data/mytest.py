@@ -10,21 +10,25 @@ from imagenet22k_dataset import IN22KDATASET
 # Perform k-fold cross-validation
 def test_IN22KDATASET():
     
-    root_dir = 'D:\Learning\Grad_0\Project\Swin-Transformer_Tumor\Swin-Transformer_Tumor\data\dataset'
+    root_dir = 'D:\Learning\Grad_0\Project\Swin-Transformer_Tumor\Swin-Transformer_Tumor\data\dataset2'
     k_folds = 5
     current_fold = 0
 
     # Create an instance of IN22KDATASET
-    dataset = IN22KDATASET(root_dir, k_folds, current_fold)
-
+    # dataset = IN22KDATASET(root_dir, k_folds, current_fold)
+    # dataset_train, dataset_val, data_loader_train, data_loader_val, mixup_fn = build_loader(config,5,current_fold)
+    dataset2 = IN22KDATASET(root_dir,k_folds,current_fold)
     # Get the total number of data
-    print(f'Total number of data: {len(dataset)}')
-
-    data, label = dataset[0]
+    # print(f'Total number of data: {len(dataset)}')
+    print(len(dataset2))
+    data, label = dataset2[160]
     print(f'First data: {data}, label: {label}')
+    # print('benig',dataset2.malignant)
 
-    data, label = dataset[1848]
-    print(f'Last data: {data}, label: {label}')
+
+
+    # data, label = dataset[1848]
+    # print(f'Last data: {data}, label: {label}')
 
 if __name__ == '__main__':
     test_IN22KDATASET()

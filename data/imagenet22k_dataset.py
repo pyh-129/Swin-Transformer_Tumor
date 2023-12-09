@@ -20,7 +20,7 @@ class IN22KDATASET(data.Dataset):
         super(IN22KDATASET, self).__init__()
 
         self.data_path = root #D:\Learning\Grad_0\Project\Swin-Transformer_Tumor\Swin-Transformer_Tumor\data\dataset
-        self.single_path = os.path.join(self.data_path, r'shell3')
+        self.single_path = os.path.join(self.data_path, r'shell6')
 
         self.class_list = os.listdir(self.single_path)
 
@@ -29,6 +29,13 @@ class IN22KDATASET(data.Dataset):
         self.malignant = os.listdir(os.path.join(self.single_path, self.class_list[1]))
         self.malignant.sort(key=lambda x: int(x[:-4]))
         self.data_list = self.benign + self.malignant
+
+
+        self.data_transform = transforms.Compose([
+            transforms.Resize((112, 112)),  
+            transforms.ToTensor(),  
+            # transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])  
+        ])
 
         # Calculate the size of each fold
         fold_size = len(self.data_list) // k_folds
@@ -50,19 +57,25 @@ class IN22KDATASET(data.Dataset):
     def __getitem__(self, index):
     # Use the current fold's train/test indices to access the data
         sample = self.data_list[index]
-        if index in self.train_indices:
+        if index < len(self.benign):
             # Training data handling
             images = self._load_image(os.path.join(self.single_path, self.class_list[0], sample))
-            images = torch.from_numpy(images).to(torch.float32)
-
+            print(images.shape)
+            # images = Image.fromarray(images) 
+            # images = self.data_transform(images)
+            # images = torch.from_numpy(images).to(torch.float32)
+           
             # target == benign
             target = torch.tensor(0.0).to(torch.float32)
 
             return images, target
-        elif index in self.test_indices:
+        else:
             # Test data handling
             images = self._load_image(os.path.join(self.single_path, self.class_list[1], sample))
-            images = torch.from_numpy(images).to(torch.float32)
+            # images = Image.fromarray(images) 
+            # images = self.data_transform(images)
+            # images = torch.from_numpy(images).to(torch.float32)
+          
 
             # target == malignant
             target = torch.tensor(1.0).to(torch.float32)
@@ -75,6 +88,7 @@ class IN22KDATASET(data.Dataset):
         try:
             # Load the image using numpy
             im = np.load(path)
+            print(im.shape)
         except Exception as e:
             print(f"ERROR IMG LOADED: {path}, due to {e}")
             # If an error occurs, generate a random image

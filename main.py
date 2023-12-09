@@ -91,86 +91,6 @@ def parse_option():
 
 def main(config):
     # dataset_train, dataset_val, data_loader_train, data_loader_val, mixup_fn = build_loader(config)
-
-    logger.info(f"Creating model:{config.MODEL.TYPE}/{config.MODEL.NAME}")
-    model = build_model(config)
-    logger.info(str(model))
-
-    n_parameters = sum(p.numel() for p in model.parameters() if p.requires_grad)
-    logger.info(f"number of params: {n_parameters}")
-    if hasattr(model, 'flops'):
-        flops = model.flops()
-        logger.info(f"number of GFLOPs: {flops / 1e9}")
-
-    model.cuda()
-    model_without_ddp = model
-
-    optimizer = build_optimizer(config, model)
-    model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[config.LOCAL_RANK], broadcast_buffers=False)
-    loss_scaler = NativeScalerWithGradNormCount()
-
-    if config.TRAIN.ACCUMULATION_STEPS > 1:
-        lr_scheduler = build_scheduler(config, optimizer, len(data_loader_train) // config.TRAIN.ACCUMULATION_STEPS)
-    else:
-        lr_scheduler = build_scheduler(config, optimizer, len(data_loader_train))
-
-    if config.AUG.MIXUP > 0.:
-        # smoothing is handled with mixup label transform
-        criterion = SoftTargetCrossEntropy()
-    elif config.MODEL.LABEL_SMOOTHING > 0.:
-        criterion = LabelSmoothingCrossEntropy(smoothing=config.MODEL.LABEL_SMOOTHING)
-    else:
-        criterion = torch.nn.CrossEntropyLoss()
-
-    max_accuracy = 0.0
-
-    if config.TRAIN.AUTO_RESUME:
-        resume_file = auto_resume_helper(config.OUTPUT)
-        if resume_file:
-            if config.MODEL.RESUME:
-                logger.warning(f"auto-resume changing resume file from {config.MODEL.RESUME} to {resume_file}")
-            config.defrost()
-            config.MODEL.RESUME = resume_file
-            config.freeze()
-            logger.info(f'auto resuming from {resume_file}')
-        else:
-            logger.info(f'no checkpoint found in {config.OUTPUT}, ignoring auto resume')
-
-    train_loss = []
-    val_loss = []
-    val_acc = []
-    val_TP = []
-    val_TN = []
-    val_FP = []
-    val_FN = []
-    val_prob = []
-
-    if config.MODEL.RESUME:
-        max_accuracy = load_checkpoint(config, model_without_ddp, optimizer, lr_scheduler, loss_scaler, logger)
-        acc1, loss, TP, TN, FP, FN, prob = validate(config, data_loader_val, model)
-        val_loss.append(loss)
-        val_acc.append(acc1)
-        val_TP.append(TP)
-        val_TN.append(TN)
-        val_FP.append(FP)
-        val_FN.append(FN)
-        val_prob.append(prob)
-        logger.info(f"Accuracy of the network on the {len(dataset_val)} test images: {acc1:.1f}%")
-        if config.EVAL_MODE:
-            return
-
-    if config.MODEL.PRETRAINED and (not config.MODEL.RESUME):
-        load_pretrained(config, model_without_ddp, logger)
-        acc1, loss, _, _, _, _, _= validate(config, data_loader_val, model)
-        logger.info(f"Accuracy of the network on the {len(dataset_val)} test images: {acc1:.1f}%")
-
-    if config.THROUGHPUT_MODE:
-        throughput(data_loader_val, model, logger)
-        return
-
-    logger.info("Start training")
-
-    start_time = time.time()
 ## add k-folds
     num_folds=5
     fold_metrics = {
@@ -185,6 +105,87 @@ def main(config):
     
     for fold_index in range(num_folds):
         dataset_train, dataset_val, data_loader_train, data_loader_val, mixup_fn = build_loader(config,num_folds,current_fold=fold_index)
+
+        logger.info(f"Creating model:{config.MODEL.TYPE}/{config.MODEL.NAME}")
+        model = build_model(config)
+        logger.info(str(model))
+
+        n_parameters = sum(p.numel() for p in model.parameters() if p.requires_grad)
+        logger.info(f"number of params: {n_parameters}")
+        if hasattr(model, 'flops'):
+            flops = model.flops()
+            logger.info(f"number of GFLOPs: {flops / 1e9}")
+
+        model.cuda()
+        model_without_ddp = model
+
+        optimizer = build_optimizer(config, model)
+        model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[config.LOCAL_RANK], broadcast_buffers=False)
+        loss_scaler = NativeScalerWithGradNormCount()
+
+        if config.TRAIN.ACCUMULATION_STEPS > 1:
+            lr_scheduler = build_scheduler(config, optimizer, len(data_loader_train) // config.TRAIN.ACCUMULATION_STEPS)
+        else:
+            lr_scheduler = build_scheduler(config, optimizer, len(data_loader_train))
+
+        if config.AUG.MIXUP > 0.:
+            # smoothing is handled with mixup label transform
+            criterion = SoftTargetCrossEntropy()
+        elif config.MODEL.LABEL_SMOOTHING > 0.:
+            criterion = LabelSmoothingCrossEntropy(smoothing=config.MODEL.LABEL_SMOOTHING)
+        else:
+            criterion = torch.nn.CrossEntropyLoss()
+
+        max_accuracy = 0.0
+
+        if config.TRAIN.AUTO_RESUME:
+            resume_file = auto_resume_helper(config.OUTPUT)
+            if resume_file:
+                if config.MODEL.RESUME:
+                    logger.warning(f"auto-resume changing resume file from {config.MODEL.RESUME} to {resume_file}")
+                config.defrost()
+                config.MODEL.RESUME = resume_file
+                config.freeze()
+                logger.info(f'auto resuming from {resume_file}')
+            else:
+                logger.info(f'no checkpoint found in {config.OUTPUT}, ignoring auto resume')
+
+        train_loss = []
+        val_loss = []
+        val_acc = []
+        val_TP = []
+        val_TN = []
+        val_FP = []
+        val_FN = []
+        val_prob = []
+
+        if config.MODEL.RESUME:
+            max_accuracy = load_checkpoint(config, model_without_ddp, optimizer, lr_scheduler, loss_scaler, logger)
+            acc1, loss, TP, TN, FP, FN, prob = validate(config, data_loader_val, model)
+            val_loss.append(loss)
+            val_acc.append(acc1)
+            val_TP.append(TP)
+            val_TN.append(TN)
+            val_FP.append(FP)
+            val_FN.append(FN)
+            val_prob.append(prob)
+            logger.info(f"Accuracy of the network on the {len(dataset_val)} test images: {acc1:.1f}%")
+            if config.EVAL_MODE:
+                return
+
+        if config.MODEL.PRETRAINED and (not config.MODEL.RESUME):
+            load_pretrained(config, model_without_ddp, logger)
+            acc1, loss, _, _, _, _, _= validate(config, data_loader_val, model)
+            logger.info(f"Accuracy of the network on the {len(dataset_val)} test images: {acc1:.1f}%")
+
+        if config.THROUGHPUT_MODE:
+            throughput(data_loader_val, model, logger)
+            return
+
+        logger.info("Start training")
+
+        start_time = time.time()
+
        
         for metric in fold_metrics.keys():
              fold_metrics[metric][fold_index] = []
@@ -198,7 +199,8 @@ def main(config):
             if dist.get_rank() == 0 and (epoch % config.SAVE_FREQ == 0 or epoch == (config.TRAIN.EPOCHS - 1)):
                 save_checkpoint(config, epoch, model_without_ddp, max_accuracy, optimizer, lr_scheduler, loss_scaler,
                                 logger)
-
+            #自己加print
+            # print(loss1)
             acc1, loss, TP, TN, FP, FN, prob= validate(config, data_loader_val, model)
             fold_metrics["val_loss"][fold_index].append(loss)
             fold_metrics["val_acc"][fold_index].append(acc1)
@@ -219,25 +221,26 @@ def main(config):
             max_accuracy = max(max_accuracy, acc1)
             logger.info(f'Max accuracy: {max_accuracy:.2f}%')
 
-    total_time = time.time() - start_time
+        path = 'D:\Learning\Grad_0\Project\Swin-Transformer_Tumor\Swin-Transformer_Tumor\data'
+        file_name = f'output_fold_{fold_index}'
+        with open(fr"{path}\\{file_name}_train_loss.txt", 'w') as train_los:
+            train_los.write(str(fold_metrics["train_loss"][fold_index]))
+        with open(fr"{path}\\{file_name}_val_loss.txt", 'w') as val_los:
+            val_los.write(str(fold_metrics["val_loss"][fold_index]))
+        with open(fr"{path}\\{file_name}_val_acc.txt", 'w') as train_ac:
+            train_ac.write(str(fold_metrics["val_acc"][fold_index]))
+        with open(fr"{path}\\{file_name}_val_TP.txt", 'w') as val_record_tp:
+            val_record_tp.write(str(fold_metrics["val_TP"][fold_index]))
+        with open(fr"{path}\\{file_name}_val_TN.txt", 'w') as val_record_tn:
+            val_record_tn.write(str(fold_metrics["val_TN"][fold_index]))
+        with open(fr"{path}\\{file_name}_val_FP.txt", 'w') as val_record_fp:
+            val_record_fp.write(str(fold_metrics["val_FP"][fold_index]))
+        with open(fr"{path}\\{file_name}_val_FN.txt", 'w') as val_record_fn:
+            val_record_fn.write(str(fold_metrics["val_FN"][fold_index]))
+        with open(fr"{path}\\{file_name}_val_prob.txt", 'w') as val_record_prob:
+            val_record_prob.write(str(fold_metrics["val_prob"][fold_index]))
 
-    file_name = 'dataset'
-    with open(fr"路径\{file_name}_train_loss.txt", 'w') as train_los:
-        train_los.write(str(train_loss))
-    with open(fr"路径\{file_name}_val_loss.txt", 'w') as val_los:
-        val_los.write(str(val_loss))
-    with open(fr"路径\{file_name}_val_acc.txt", 'w') as train_ac:
-        train_ac.write(str(val_acc))
-    with open(fr"路径\{file_name}_val_TP.txt", 'w') as val_record_tp:
-        val_record_tp.write(str(val_TP))
-    with open(fr"路径\{file_name}_val_TN.txt", 'w') as val_record_tn:
-        val_record_tn.write(str(val_TN))
-    with open(fr"路径\{file_name}_val_FP.txt", 'w') as val_record_fp:
-        val_record_fp.write(str(val_FP))
-    with open(fr"路径\{file_name}_val_FN.txt", 'w') as val_record_fn:
-        val_record_fn.write(str(val_FN))
-    with open(fr"路径\{file_name}_val_prob.txt", 'w') as val_record_prob:
-        val_record_prob.write(str(val_prob))
+    total_time = time.time() - start_time
 
     total_time_str = str(datetime.timedelta(seconds=int(total_time)))
     logger.info('Training time {}'.format(total_time_str))
