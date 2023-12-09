@@ -60,10 +60,10 @@ class IN22KDATASET(data.Dataset):
         if index < len(self.benign):
             # Training data handling
             images = self._load_image(os.path.join(self.single_path, self.class_list[0], sample))
-            print(images.shape)
+            # print(images.shape)
             # images = Image.fromarray(images) 
             # images = self.data_transform(images)
-            # images = torch.from_numpy(images).to(torch.float32)
+            images = torch.from_numpy(images).to(torch.float32)
            
             # target == benign
             target = torch.tensor(0.0).to(torch.float32)
@@ -74,7 +74,7 @@ class IN22KDATASET(data.Dataset):
             images = self._load_image(os.path.join(self.single_path, self.class_list[1], sample))
             # images = Image.fromarray(images) 
             # images = self.data_transform(images)
-            # images = torch.from_numpy(images).to(torch.float32)
+            images = torch.from_numpy(images).to(torch.float32)
           
 
             # target == malignant
@@ -87,8 +87,8 @@ class IN22KDATASET(data.Dataset):
     def _load_image(self, path):
         try:
             # Load the image using numpy
-            im = np.load(path)
-            print(im.shape)
+            im = np.load(path).transpose(0,1,2)
+            # print(im.shape)
         except Exception as e:
             print(f"ERROR IMG LOADED: {path}, due to {e}")
             # If an error occurs, generate a random image

@@ -22,6 +22,7 @@ def test_IN22KDATASET():
     # print(f'Total number of data: {len(dataset)}')
     print(len(dataset2))
     data, label = dataset2[160]
+    print(data.shape)
     print(f'First data: {data}, label: {label}')
     # print('benig',dataset2.malignant)
 
