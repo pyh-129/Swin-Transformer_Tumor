@@ -63,7 +63,7 @@ class IN22KDATASET(data.Dataset):
             # print(images.shape)
             # images = Image.fromarray(images) 
             # images = self.data_transform(images)
-            images = torch.from_numpy(images).to(torch.float32)
+            images = torch.from_numpy(images).to(torch.float32).permute(2,0,1)
            
             # target == benign
             target = torch.tensor(0.0).to(torch.float32)
@@ -74,9 +74,9 @@ class IN22KDATASET(data.Dataset):
             images = self._load_image(os.path.join(self.single_path, self.class_list[1], sample))
             # images = Image.fromarray(images) 
             # images = self.data_transform(images)
-            images = torch.from_numpy(images).to(torch.float32)
+            images = torch.from_numpy(images).to(torch.float32).permute(2,0,1)
           
-
+            print(images.shape)
             # target == malignant
             target = torch.tensor(1.0).to(torch.float32)
 
