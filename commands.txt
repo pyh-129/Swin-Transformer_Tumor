@@ -1,0 +1,9 @@
+python main.py --cfg configs/swin/swin_tiny_patch4_window7_224.yaml --batch-size 2 --data-path D:\Learning\Grad_0\Project\Swin-Transformer_Tumor\Swin-Transformer_Tumor\data\dataset2 --local_rank 0
+
+
+python test.py --cfg configs/swin/swin_tiny_patch4_window7_224.yaml --batch-size 64 --data-path D:\Learning\Grad_0\Project\Swin-Transformer_Tumor\Swin-Transformer_Tumor\data\dataset2 --local_rank 0
+
+
+python main.py --cfg configs/swin/swin_tiny_patch4_window7_224.yaml --batch-size 64 --data-path /root/Proj/SwinT/Swin-Transformer_Tumor/data/dataset2 --local_rank 0
+
+
