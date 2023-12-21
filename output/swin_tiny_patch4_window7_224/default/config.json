@@ -15,10 +15,10 @@ AUG:
 BASE:
 - ''
 DATA:
-  BATCH_SIZE: 1
+  BATCH_SIZE: 2
   CACHE_MODE: part
   DATASET: imagenet
-  DATA_PATH: D:\Learning\Grad_0\Project\Swin-Transformer_Tumor\Swin-Transformer_Tumor\data\dataset2
+  DATA_PATH: /root/autodl-tmp/Proj/SwinT/Swin-Transformer_Tumor/data/dataset2
   IMG_SIZE: 112
   INTERPOLATION: bicubic
   MASK_PATCH_SIZE: 32
@@ -148,7 +148,7 @@ MODEL:
     USE_BPR: true
     WINDOW_SIZE: 7
   TYPE: swin
-OUTPUT: output\swin_tiny_patch4_window7_224\default
+OUTPUT: output/swin_tiny_patch4_window7_224/default
 PRINT_FREQ: 10
 SAVE_FREQ: 1
 SEED: 0
@@ -161,7 +161,7 @@ THROUGHPUT_MODE: false
 TRAIN:
   ACCUMULATION_STEPS: 1
   AUTO_RESUME: true
-  BASE_LR: 9.765625e-07
+  BASE_LR: 1.953125e-06
   CLIP_GRAD: 5.0
   EPOCHS: 150
   LAYER_DECAY: 1.0
@@ -172,7 +172,7 @@ TRAIN:
     MULTISTEPS: []
     NAME: cosine
     WARMUP_PREFIX: true
-  MIN_LR: 9.765625e-09
+  MIN_LR: 1.953125e-08
   MOE:
     SAVE_MASTER: false
   OPTIMIZER:
@@ -185,5 +185,5 @@ TRAIN:
   START_EPOCH: 0
   USE_CHECKPOINT: false
   WARMUP_EPOCHS: 20
-  WARMUP_LR: 9.765625e-10
+  WARMUP_LR: 1.953125e-09
   WEIGHT_DECAY: 0.05

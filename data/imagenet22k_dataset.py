@@ -19,8 +19,8 @@ class IN22KDATASET(data.Dataset):
     def __init__(self, root, k_folds,current_fold):
         super(IN22KDATASET, self).__init__()
 
-        self.data_path = root #D:\Learning\Grad_0\Project\Swin-Transformer_Tumor\Swin-Transformer_Tumor\data\dataset
-        self.single_path = os.path.join(self.data_path, r'shell6')
+        self.data_path = root 
+        self.single_path = os.path.join(self.data_path, r'shell3')
 
         self.class_list = os.listdir(self.single_path)
 
@@ -40,7 +40,6 @@ class IN22KDATASET(data.Dataset):
         # Calculate the size of each fold
         fold_size = len(self.data_list) // k_folds
 
-        # Create a list to hold the data indices for each fold
         self.folds = []
 
         # Create the folds

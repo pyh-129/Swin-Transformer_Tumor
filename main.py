@@ -160,7 +160,7 @@ def main(config):
         val_prob = []
 
         if config.MODEL.RESUME and fold_index == 0:
-            max_accuracy = load_checkpoint(config, model_without_ddp, optimizer, lr_scheduler, loss_scaler, logger)
+            max_accuracy = load_checkpoint(config, model_without_ddp, optimizer, lr_scheduler, loss_scaler, logger,fold_index)
             acc1, loss, TP, TN, FP, FN, prob = validate(config, data_loader_val, model)
             val_loss.append(loss)
             val_acc.append(acc1)
@@ -199,7 +199,8 @@ def main(config):
             train_loss.append(loss1)
             if dist.get_rank() == 0 and (epoch % config.SAVE_FREQ == 0 or epoch == (config.TRAIN.EPOCHS - 1)):
                 save_checkpoint(config, epoch, model_without_ddp, max_accuracy, optimizer, lr_scheduler, loss_scaler,
-                                logger)
+                                logger,fold_index)
+
             #自己加print
             # print(loss1)
             acc1, loss, TP, TN, FP, FN, prob= validate(config, data_loader_val, model)
@@ -222,24 +223,34 @@ def main(config):
             max_accuracy = max(max_accuracy, acc1)
             logger.info(f'Max accuracy: {max_accuracy:.2f}%')
 
-        path = 'D:\Learning\Grad_0\Project\Swin-Transformer_Tumor\Swin-Transformer_Tumor\data'
+        path = '/root/autodl-tmp/Proj/SwinT/Swin-Transformer_Tumor/data/res/shell3_res'
         file_name = f'output_fold_{fold_index}'
+        os.makedirs(path, exist_ok=True)
+
         with open(fr"{path}\\{file_name}_train_loss.txt", 'w') as train_los:
-            train_los.write(str(fold_metrics["train_loss"][fold_index]))
+            for item in fold_metrics["train_loss"][fold_index]:
+                train_los.write(f"{item}\n")
         with open(fr"{path}\\{file_name}_val_loss.txt", 'w') as val_los:
-            val_los.write(str(fold_metrics["val_loss"][fold_index]))
+            for item in fold_metrics["val_loss"][fold_index]:
+                val_los.write(f"{item}\n")
         with open(fr"{path}\\{file_name}_val_acc.txt", 'w') as train_ac:
-            train_ac.write(str(fold_metrics["val_acc"][fold_index]))
+            for item in fold_metrics["val_acc"][fold_index]:
+                train_ac.write(f"{item}\n")
         with open(fr"{path}\\{file_name}_val_TP.txt", 'w') as val_record_tp:
-            val_record_tp.write(str(fold_metrics["val_TP"][fold_index]))
+            for item in fold_metrics["val_TP"][fold_index]:
+                val_record_tp.write(f"{item}\n")
         with open(fr"{path}\\{file_name}_val_TN.txt", 'w') as val_record_tn:
-            val_record_tn.write(str(fold_metrics["val_TN"][fold_index]))
+            for item in fold_metrics["val_TN"][fold_index]:
+                val_record_tn.write(f"{item}\n")
         with open(fr"{path}\\{file_name}_val_FP.txt", 'w') as val_record_fp:
-            val_record_fp.write(str(fold_metrics["val_FP"][fold_index]))
+            for item in fold_metrics["val_FP"][fold_index]:
+                val_record_fp.write(f"{item}\n")
         with open(fr"{path}\\{file_name}_val_FN.txt", 'w') as val_record_fn:
-            val_record_fn.write(str(fold_metrics["val_FN"][fold_index]))
+            for item in fold_metrics["val_FN"][fold_index]:
+                val_record_fn.write(f"{item}\n")
         with open(fr"{path}\\{file_name}_val_prob.txt", 'w') as val_record_prob:
-            val_record_prob.write(str(fold_metrics["val_prob"][fold_index]))
+            for item in fold_metrics["val_prob"][fold_index]:
+                val_record_prob.write(f"{item}\n")
 
     total_time = time.time() - start_time
 

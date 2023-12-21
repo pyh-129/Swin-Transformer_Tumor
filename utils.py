@@ -11,13 +11,15 @@ import torch.distributed as dist
 from torch._six import inf
 
 
-def load_checkpoint(config, model, optimizer, lr_scheduler, loss_scaler, logger):
+def load_checkpoint(config, model, optimizer, lr_scheduler, loss_scaler, logger,fold_index):
     logger.info(f"==============> Resuming form {config.MODEL.RESUME}....................")
     if config.MODEL.RESUME.startswith('https'):
         checkpoint = torch.hub.load_state_dict_from_url(
             config.MODEL.RESUME, map_location='cpu', check_hash=True)
     else:
-        checkpoint = torch.load(config.MODEL.RESUME, map_location='cpu')
+        checkpoint_file = os.path.join(config.OUTPUT, f'checkpoint_fold_{fold_index}_epoch_{config.TRAIN.START_EPOCH}.pth')
+        if os.path.isfile(checkpoint_file):
+            checkpoint = torch.load(checkpoint_file, map_location='cpu')
 
     if checkpoint['model']['head.weight'].shape[0] == 1000:
         checkpoint['model']['head.weight'] = torch.nn.Parameter(
@@ -134,7 +136,7 @@ def load_pretrained(config, model, logger):
     torch.cuda.empty_cache()
 
 
-def save_checkpoint(config, epoch, model, max_accuracy, optimizer, lr_scheduler, loss_scaler, logger):
+def save_checkpoint(config, epoch, model, max_accuracy, optimizer, lr_scheduler, loss_scaler, logger,fold_index):
     save_state = {'model': model.state_dict(),
                   'optimizer': optimizer.state_dict(),
                   'lr_scheduler': lr_scheduler.state_dict(),
@@ -143,7 +145,7 @@ def save_checkpoint(config, epoch, model, max_accuracy, optimizer, lr_scheduler,
                   'epoch': epoch,
                   'config': config}
 
-    save_path = os.path.join(config.OUTPUT, f'ckpt_epoch_{epoch}.pth')
+    save_path = os.path.join(config.OUTPUT, f'ckpt_epoch_fold_{fold_index}_epoch_{epoch}.pth')
     logger.info(f"{save_path} saving......")
     torch.save(save_state, save_path)
     logger.info(f"{save_path} saved !!!")
