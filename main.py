@@ -159,7 +159,7 @@ def main(config):
         val_FN = []
         val_prob = []
 
-        if config.MODEL.RESUME:
+        if config.MODEL.RESUME and fold_index == 0:
             max_accuracy = load_checkpoint(config, model_without_ddp, optimizer, lr_scheduler, loss_scaler, logger)
             acc1, loss, TP, TN, FP, FN, prob = validate(config, data_loader_val, model)
             val_loss.append(loss)
@@ -172,7 +172,8 @@ def main(config):
             logger.info(f"Accuracy of the network on the {len(dataset_val)} test images: {acc1:.1f}%")
             if config.EVAL_MODE:
                 return
-
+        elif fold_index > 0:
+            max_accuracy = 0.0 
         if config.MODEL.PRETRAINED and (not config.MODEL.RESUME):
             load_pretrained(config, model_without_ddp, logger)
             acc1, loss, _, _, _, _, _= validate(config, data_loader_val, model)
