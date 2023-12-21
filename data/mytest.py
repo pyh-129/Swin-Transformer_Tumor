@@ -12,24 +12,36 @@ def test_IN22KDATASET():
     
     root_dir = 'D:\Learning\Grad_0\Project\Swin-Transformer_Tumor\Swin-Transformer_Tumor\data\dataset2'
     k_folds = 5
-    current_fold = 0
+    current_fold = 1
 
     # Create an instance of IN22KDATASET
-    # dataset = IN22KDATASET(root_dir, k_folds, current_fold)
+    # dataset = IN22KDATASET(root_dir, k_folds, current_fold)D
     # dataset_train, dataset_val, data_loader_train, data_loader_val, mixup_fn = build_loader(config,5,current_fold)
     dataset2 = IN22KDATASET(root_dir,k_folds,current_fold)
     # Get the total number of data
     # print(f'Total number of data: {len(dataset)}')
-    print(len(dataset2))
-    data, label = dataset2[160]
-    print(data.shape)
-    print(f'First data: {data}, label: {label}')
+    # print(len(dataset2))
+    # data, label = dataset2[160]
+    # print(data.shape)
+    # print(f'First data: {data}, label: {label}')
     # print('benig',dataset2.malignant)
 
 
+    # 打印数据集中的总样本数
+    print(f'Total number of data: {len(dataset2)}')
+    print(len(dataset2.train_indices))
+    print(len(dataset2.test_indices))
+    # 遍历数据集中的每个样本，并打印图像和标签
+    # for idx in range(len(dataset2)):
+    #     data, label = dataset2[idx]
+    #     print(f'Sample {idx + 1}: data shape - {data.shape}, label - {label}')
+       
 
     # data, label = dataset[1848]
     # print(f'Last data: {data}, label: {label}')
+
+
+
 
 if __name__ == '__main__':
     test_IN22KDATASET()

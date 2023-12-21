@@ -30,13 +30,13 @@ class IN22KDATASET(data.Dataset):
         self.malignant.sort(key=lambda x: int(x[:-4]))
         self.data_list = self.benign + self.malignant
 
+        benign_fold_size = len(self.benign) // k_folds
+        malignant_fold_size = len(self.malignant) // k_folds
 
-        self.data_transform = transforms.Compose([
-            transforms.Resize((112, 112)),  
-            transforms.ToTensor(),  
-            # transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])  
-        ])
+        self.benign_folds = []
+        self.malignant_folds = []
 
+       
         # Calculate the size of each fold
         fold_size = len(self.data_list) // k_folds
 
@@ -45,45 +45,37 @@ class IN22KDATASET(data.Dataset):
 
         # Create the folds
         for i in range(k_folds):
-            start = i * fold_size
-            end = start + fold_size if i != k_folds - 1 else len(self.data_list)
-            self.folds.append(range(start, end))
+            benign_start = i * benign_fold_size
+            benign_end = benign_start + benign_fold_size if i != k_folds - 1 else len(self.benign)
+            self.benign_folds.append(range(benign_start, benign_end))
+
+            malignant_start = i * malignant_fold_size
+            malignant_end = malignant_start + malignant_fold_size if i != k_folds - 1 else len(self.malignant)
+            self.malignant_folds.append(range(malignant_start, malignant_end))
+
     
         # Get the indices for the current fold
-        self.test_indices = self.folds[current_fold]
-        self.train_indices = [idx for fold in self.folds if fold is not self.test_indices for idx in fold]
+        self.test_indices = list(self.benign_folds[current_fold]) + list(self.malignant_folds[current_fold])
+        self.train_indices = [idx for fold in (self.benign_folds + self.malignant_folds) if fold is not self.test_indices for idx in fold]
 
        
     def __getitem__(self, index):
     # Use the current fold's train/test indices to access the data
-        sample = self.data_list[index]
-        if index < len(self.benign):
-            # Training data handling
-            images = self._load_image(os.path.join(self.single_path, self.class_list[0], sample))
-            # print(images.shape)
-            # images = Image.fromarray(images) 
-            # images = self.data_transform(images)
+        actual_index = self.train_indices[index] if index < len(self.train_indices) else self.test_indices[index - len(self.train_indices)]
+        if actual_index < len(self.benign):
+            images = self._load_image(os.path.join(self.single_path, self.class_list[0], self.benign[actual_index]))
             images = torch.from_numpy(images).to(torch.float32).permute(2,0,1)
-           
-            # target == benign
             target = torch.tensor(0.0).to(torch.float32)
-
-            return images, target
         else:
-            # Test data handling
-            images = self._load_image(os.path.join(self.single_path, self.class_list[1], sample))
-            # images = Image.fromarray(images) 
-            # images = self.data_transform(images)
+            images = self._load_image(os.path.join(self.single_path, self.class_list[1], self.malignant[actual_index - len(self.benign)]))
             images = torch.from_numpy(images).to(torch.float32).permute(2,0,1)
-          
-            print(images.shape)
-            # target == malignant
             target = torch.tensor(1.0).to(torch.float32)
 
-            return images, target
+        return images, target
+
 
     def __len__(self):
-        return len(self.data_list)
+        return len(self.train_indices)+len(self.test_indices)
     def _load_image(self, path):
         try:
             # Load the image using numpy
